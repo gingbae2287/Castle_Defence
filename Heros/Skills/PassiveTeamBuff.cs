@@ -8,17 +8,10 @@ using UnityEngine;
 
 
 public class PassiveTeamBuff : PassiveSkill {
-    /*
-    [SerializeField]float damageIncreaseRate=0;
-    [SerializeField]float damageIncreaseValue=0;
-    [SerializeField]float attackSpeedIncreaseRate=0;
-    [SerializeField]float attackSpeedIncreaseValue=0;
-    */
     [SerializeField] List<PTBSkillSet> skillSet;
     public override EnumTypes.SkillType SkillType(){
         return EnumTypes.SkillType.PassiveTeamBuff;
     }
-
 
     public override void Affect(){
         for(int i=0;i<skillSet.Count;i++){
@@ -38,8 +31,6 @@ public class PassiveTeamBuff : PassiveSkill {
             }
         }
     }
-    
-
 }
 [System.Serializable]
 public struct PTBSkillSet{

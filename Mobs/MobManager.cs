@@ -11,6 +11,7 @@ public class MobManager : MonoBehaviour{
             return instance;
         }
     }
+    public WaitForSeconds delay=new WaitForSeconds(0.1f);
 
 //===castle
      [SerializeField] MainCastle castle;
@@ -24,14 +25,14 @@ public class MobManager : MonoBehaviour{
     public Transform EndofMap;
 
 //=========
-    List<Mob> Mobs=new List<Mob>();
+    List<Monster> Mobs=new List<Monster>();
     
 
     //몬스터 타게팅 AI
     
-    List<Mob> liveMobs=new List<Mob>();
-    public Mob closestMob;
-    public Mob highestHpMob;
+    List<Monster> liveMobs=new List<Monster>();
+    public Monster closestMob;
+    public Monster highestHpMob;
 
 
 
@@ -99,15 +100,23 @@ public class MobManager : MonoBehaviour{
 
     void CreateMobs(){
         GameObject Mob;
+        Vector3 tmpPosition=mobStartPoint.position;
+        Monster tmpMonster;
         for(int i=0;i<prefabsMob.Length;i++){
             mobCount=(i+3)*(i+4); //몹당 생성되는 마리수 공식 (추후 변경)
             for(int k=0;k<mobCount;k++) {
-                Vector3 tmpPosition=mobStartPoint.position;
+                
                 tmpPosition.y=Random.Range(-100f,0);
                 Mob=Instantiate(prefabsMob[i], tmpPosition,Quaternion.identity);
                 Mob.transform.SetParent(transform);
                 Mob.transform.localScale=new Vector3(75f,75f,75f);
-                Mobs.Add(Mob.GetComponent<Mob>());
+                if(!Mob.TryGetComponent<Monster>(out tmpMonster)){
+                    Debug.LogError("monster component error");
+                    return;
+                }
+                tmpMonster.InitMonster();
+                Mobs.Add(tmpMonster);
+                //Mobs[i].InitMonster();
                 Mobs[Mobs.Count-1].ResetMob(tmpPosition);
             }
         }
@@ -130,13 +139,14 @@ public class MobManager : MonoBehaviour{
         return true;
     }
 
-    public void AddLiveMob(Mob mob)=>liveMobs.Add(mob);
-    public void RemoveLiveMob(Mob mob)=>liveMobs.Remove(mob);
+    public void AddLiveMob(Monster mob)=>liveMobs.Add(mob);
+    public void RemoveLiveMob(Monster mob)=>liveMobs.Remove(mob);
 
 
     IEnumerator ActiveMobs(){
         for(int i=0;i<Mobs.Count;i++){
-            Mobs[i].gameObject.SetActive(true);
+
+            Mobs[i].WaveStart();
             AddLiveMob(Mobs[i]);
             yield return mobSpawnDelay; //1초마다 한마리 생성.
         }

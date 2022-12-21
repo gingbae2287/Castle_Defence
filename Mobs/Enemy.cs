@@ -4,6 +4,13 @@ using UnityEngine;
 
 public abstract class Enemy: MonoBehaviour
 {
-    public int hp;
-    public abstract void Damaged(int Damage);
+    public int hp{get; protected set;}
+    public int level{get; protected set;}
+    public abstract void Damaged(OnHit onHit);
+
+    public virtual void Stun(){
+    }
+
+    public virtual void Knockback(){
+    }
 }

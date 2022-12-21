@@ -7,7 +7,7 @@ public class AttackObject : MonoBehaviour {
 
 //component
     Transform tr;
-
+    OnHit onHit;
 
     //공격타입
     //원거리,스킬은 자동타게팅 ai에 따라 알고리즘 다르게. (일단 default로 가까운적)
@@ -39,7 +39,7 @@ public class AttackObject : MonoBehaviour {
         //tr=GetComponent<Transform>();
         if(!TryGetComponent<Transform>(out tr)) Debug.LogError("tr is null");
     }
-    public void Attack(int damage, Vector2 target){
+    public void Attack(OnHit OnHit, Vector2 target){
         gameObject.SetActive(true);
         tr.localPosition=new Vector3(0, 0.2f, 0);
         
@@ -53,7 +53,8 @@ public class AttackObject : MonoBehaviour {
         float angle=Mathf.Atan2(vy,vx)*Mathf.Rad2Deg;
         tr.rotation=Quaternion.AngleAxis(angle,Vector3.forward);
 
-        attackDamage=damage;
+        //attackDamage=damage;
+        onHit=OnHit;
         isattacking=true;
     }
 
@@ -81,17 +82,13 @@ public class AttackObject : MonoBehaviour {
 
 
     private void OnTriggerEnter2D(Collider2D other) {
-        if(isattacking){
-
-            if(other.CompareTag("Enemy")){
-                //StopCoroutine("FindTarget");
-                tr.localPosition=new Vector3(0, 0.2f, 0); //오브젝트 히어로 앞으로 다시 이동
-                //other.GetComponent<Enemy>().Damaged(attackDamage);  //getcomponent에 null이 발생할 경우 memory allocation이 발생하는데 이를 방지하기위해 try
-                if(other.TryGetComponent(out Enemy enemy)) enemy.Damaged(attackDamage);
-                isattacking=false;
-                gameObject.SetActive(false);
-
-            }
-        }
+        if(!isattacking) return;
+        if(!other.CompareTag("Enemy")) return;
+                
+        //other.GetComponent<Enemy>().Damaged(attackDamage);  //getcomponent에 null이 발생할 경우 memory allocation이 발생하는데 이를 방지하기위해 try
+        if(other.TryGetComponent(out Enemy enemy)) enemy.Damaged(onHit);
+        isattacking=false;
+        tr.localPosition=new Vector3(0, 0.2f, 0); //오브젝트 히어로 앞으로 다시 이동
+        gameObject.SetActive(false);
     }
 }

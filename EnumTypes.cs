@@ -11,6 +11,7 @@ namespace EnumTypes
 	public enum SkillType{
 		ActiveSoloBuff,
 		PassiveTeamBuff,
+		PassiveOnHit
 
 	}
 	/// Passive Team Buff Skill Type
@@ -18,7 +19,8 @@ namespace EnumTypes
 		DamageIncreaseRate,
 		DamageIncreaseValue,
 		AttackSpeedIncreaseRate,
-		AttackSpeedIncreaseValue
-	};
+		AttackSpeedIncreaseValue,
+		
+	}
 
 }

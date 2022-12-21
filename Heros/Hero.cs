@@ -2,35 +2,33 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public struct FinalStat{
-    public int damage;
-    public float atkSpeed;
-    public FinalStat(HeroStat baseStat){
-        damage=baseStat.damage;
-        atkSpeed=baseStat.atkSpeed;
+[System.Serializable]
+public class OnHit{
+        int damage;
+        [SerializeField] bool stun;
+        [SerializeField] bool knockback;
+        public int Damage{get{return damage;} set{damage=value;}}
+        public bool Stun{get{return stun;} set{stun=value;}}
+        public bool Knockback{get{return knockback;} set{knockback=value;}}
+        public void SetOnHit(int d, bool s=false, bool k=false){
+            damage=d;
+            stun=s;
+            knockback=k;
+
+        }
     }
-    public void StatInit(HeroStat baseStat){
-        //영웅 등록 해제시, 적용중인 다른 영웅들의 패시브 효과를 없엔 순수 stat으로 적용
-        damage=baseStat.damage;
-        atkSpeed=baseStat.atkSpeed;
-    }
-    public void SetFinalStat(HeroStat baseStat){
-        StatInit(baseStat);
-        damage=(int)(damage*(1+SkillManager.p_TeamBuff.DamageIncRate)+SkillManager.p_TeamBuff.DamageInc);
-        atkSpeed=atkSpeed*(1+SkillManager.p_TeamBuff.AtkSpeedIncRate)+SkillManager.p_TeamBuff.AtkSpeedInc;
-        
-    }
-}
+
 public class Hero : MonoBehaviour
 {
     ///====stat
     [Header("Stat scriptable Object")]
     [SerializeField]HeroStat BaseStat;
-    FinalStat FinalStat;
+    st.FinalStat FinalStat;
 
     [Header("Skill scriptable Object")]
     [SerializeField] Skill skill;
     public Skill GetSkill()=>skill;
+    OnHit onHit;
     
 
 
@@ -61,6 +59,7 @@ public class Hero : MonoBehaviour
 ///공격 오브젝트
 
     public void HeroInit(){
+        
         ComponentInit();
         //공격관련
         CreateAttackObject();
@@ -69,15 +68,28 @@ public class Hero : MonoBehaviour
         targetAI=TargetAI.Closest;
         ////
         enemyLayer =LayerMask.GetMask("Enemy");
-        BaseStat.atkRange=Screen.currentResolution.width/2-transform.position.x;
 
+        BaseStat.atkRange=Screen.currentResolution.width/2-transform.position.x;
         StatUpdate();
+
+        //skill
+        if(skill!=null) {
+            skill.SetOwner(this);
+        }
+
+
+    }
+
+    private void OnEnable() {
+        if(anim!=null) SetAttackAnim();
     }
     void ComponentInit(){
         anim=GetComponentInChildren<Animator>();
         if(anim==null) Debug.LogError("anim is null");
 
-        FinalStat=new FinalStat(BaseStat);
+        FinalStat=new st.FinalStat(BaseStat);
+        onHit=new OnHit();
+        onHit.Damage=FinalStat.damage;
     }
     void CreateAttackObject(){
         /// 공격 오브젝트 (화살)
@@ -89,7 +101,11 @@ public class Hero : MonoBehaviour
         }
         
     }
-    
+    public void AffectOnHitSkill(OnHit newOnHit){
+        onHit=newOnHit;
+        onHit.Damage=FinalStat.damage;
+    }
+
     public void StatUpdate(){
         FinalStat.SetFinalStat(BaseStat);
         //영웅 등록 해제시, 적용중인 다른 영웅들의 패시브 효과를 없엔 순수 stat으로 적용
@@ -100,10 +116,13 @@ public class Hero : MonoBehaviour
         switch(BaseStat.weaponType){
             case HeroStat.WeaponType.Bow:
             anim.SetFloat("NormalState",0.5f);
+            Debug.Log(anim.GetFloat("NormalState"));
+            Debug.Log("보우");
             break;
 
             case HeroStat.WeaponType.Wand:
             anim.SetFloat("NormalState",1.0f);
+            Debug.Log("완드");
             break;
         }
         //anim.SetFloat("AttackState",1f);
@@ -139,6 +158,7 @@ public class Hero : MonoBehaviour
                 Attack_Melee();
                     //공격속도와 애니메이션 딜레이 고려하기
             }
+            
             if(GameManager.Instance.gameState==EnumTypes.GameState.Idle){
                 //게임중 아닐때 break;
                 break;
@@ -147,23 +167,12 @@ public class Hero : MonoBehaviour
     }
 
     void GetTargetPosition(){
+        if(!MobManager.Instance.UpdateTargetAI()) {
+            isTarget=false;
+            return;
+        }
         switch(targetAI){
             case TargetAI.Closest:
-                /*hit=Physics2D.Raycast(transform.position, Vector2.right, stat.atkRange ,enemyLayer);
-                if(hit){
-                    targetPosition=hit.transform.position;
-                    isTarget=true;
-                    break;
-                }
-                */
-                if(!MobManager.Instance.closestMob.isLive) {
-                    if(MobManager.Instance.UpdateTargetAI()) {
-                        targetPosition=MobManager.Instance.closestMob.transform.position;
-                        isTarget=true;
-                    }
-                    else isTarget=false;
-                    break;
-                }
                 targetPosition=MobManager.Instance.closestMob.transform.position;
                 isTarget=true;
                 //targetPosition=Vector2.zero;
@@ -187,25 +196,15 @@ public class Hero : MonoBehaviour
     }
 
     public void Attack_Melee(){
-        //_playerState = PlayerState.attack;
         foreach(AttackObject obj in attackObj){
             if(!obj.gameObject.activeSelf){
-                obj.Attack(FinalStat.damage,targetPosition);
+                obj.Attack(onHit,targetPosition);
                 break;
             }
         }
         
     }
 
-/*
-    IEnumerator ProjectileMovement(){
-        while(GameManager.Instance.gameState==EnumTypes.GameState.Wave){
-            for(int i=0;i<attackObj.Length;i++) attackObj[i].ProjectileMotion(0.05f);
-            yield return projectileFps;
-        }
-        for(int i=0;i<attackObj.Length;i++) attackObj[i].gameObject.SetActive(false);
-    }
-*/
     public void PlayAnimation (int num)
     {
         switch(num)
@@ -220,38 +219,10 @@ public class Hero : MonoBehaviour
 
             case 4: //Attack Sword
             anim.SetTrigger("Attack");
-            anim.SetFloat("AttackState",0.0f);
-            anim.SetFloat("NormalState",0.0f);
             break;
 
             case 5: //Attack Bow
             anim.SetTrigger("Attack");
-            
-            
-            break;
-
-            case 6: //Attack Magic
-            anim.SetTrigger("Attack");
-            anim.SetFloat("AttackState",0.0f);
-            anim.SetFloat("NormalState",1.0f);
-            break;
-
-            case 7: //Skill Sword
-            anim.SetTrigger("Attack");
-            anim.SetFloat("AttackState",1.0f);
-            anim.SetFloat("NormalState",0.0f);
-            break;
-
-            case 8: //Skill Bow
-            anim.SetTrigger("Attack");
-            anim.SetFloat("AttackState",1.0f);
-            anim.SetFloat("NormalState",0.5f);
-            break;
-
-            case 9: //Skill Magic
-            anim.SetTrigger("Attack");
-            anim.SetFloat("AttackState",1.0f);
-            anim.SetFloat("NormalState",1.0f);
             break;
         }
     }
